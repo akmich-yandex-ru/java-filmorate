@@ -15,9 +15,8 @@ import java.util.*;
 @RestController
 @RequestMapping("/films")
 public class FilmController {
-    private final static LocalDate EARLIEST_RELEASE = LocalDate.of(1895, 12, 28);
-    private final static DateTimeFormatter RUSSIAN_DATE_FORMATTER =
-            DateTimeFormatter.ofPattern("d MMMM yyyy 'года'", Locale.of("ru"));
+    private static final LocalDate EARLIEST_RELEASE = LocalDate.of(1895, 12, 28);
+    private static final DateTimeFormatter RUSSIAN_DATE_FORMATTER = DateTimeFormatter.ofPattern("d MMMM yyyy 'года'", Locale.of("ru"));
 
     private final Map<Integer, Film> films = new HashMap<>();
     private int currentId = 0;
@@ -28,7 +27,7 @@ public class FilmController {
         return films.values();
 
     }
-    
+
     @PostMapping
     public Film add(@Valid @RequestBody Film newFilm) {
         log.info("Получен запрос на добавление фильма: {}", newFilm);
@@ -66,10 +65,8 @@ public class FilmController {
 
     private void validateReleaseDate(Film film) {
         if (film.getReleaseDate() != null && film.getReleaseDate().isBefore(EARLIEST_RELEASE)) {
-            log.warn("Ошибка валидации фильма '{}': некорректная дата релиза {}",
-                    film.getName(), film.getReleaseDate());
-            throw new ValidationException("Дата релиза не может быть раньше "
-                    + EARLIEST_RELEASE.format(RUSSIAN_DATE_FORMATTER));
+            log.warn("Ошибка валидации фильма '{}': некорректная дата релиза {}", film.getName(), film.getReleaseDate());
+            throw new ValidationException("Дата релиза не может быть раньше " + EARLIEST_RELEASE.format(RUSSIAN_DATE_FORMATTER));
         }
     }
 }
