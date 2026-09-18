@@ -18,17 +18,10 @@ public class Film {
     @NotBlank(message = "Название фильма не может быть пустым")
     private String name;
 
-    //Привет Ирек!
-    //В тз для description и releaseDate не указано, что не могут быть пустыми,
-    //но логически я понимаю что надо заполнять.
-    //Вопрос: почему ты предлагаешь @NotNull? Ведь он пропустит пустую строку или с пробелами.
-    //Может лучше @NotBlank?
-    //
-    //Аналогичный вопрос и для User.name и User.birthday
-
     @Size(max = 200, message = "Максимальная длина описания — 200 символов")
     private String description;
 
+    @NotNull
     private LocalDate releaseDate;
 
     @Positive(message = "Продолжительность фильма должна быть положительным числом")
