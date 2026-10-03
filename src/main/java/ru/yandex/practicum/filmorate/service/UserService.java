@@ -131,15 +131,8 @@ public class UserService {
             friend.setFriends(new HashSet<>());
         }
 
-        if (!user.getFriends().contains(friendId)) {
-            throw new NotFoundException("Пользователь с id = " + friendId + " не находится в друзьях у пользователя с id = " + userId);
-        }
-
         user.getFriends().remove(friendId);
-
-        if (friend.getFriends() != null) {
-            friend.getFriends().remove(userId);
-        }
+        friend.getFriends().remove(userId);
 
         log.info("Пользователи {} и {} теперь не друзья", userId, friendId);
         userStorage.update(user);
