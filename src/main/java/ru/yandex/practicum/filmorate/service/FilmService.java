@@ -128,6 +128,7 @@ public class FilmService {
         log.info("Получен запрос на получение фильма с id = {}", id);
         return getFilmOrThrow(id);
     }
+
     private void validateReleaseDate(Film film) {
         if (film.getReleaseDate() != null && film.getReleaseDate().isBefore(EARLIEST_RELEASE)) {
             log.warn("Ошибка валидации фильма '{}': некорректная дата релиза {}", film.getName(), film.getReleaseDate());
