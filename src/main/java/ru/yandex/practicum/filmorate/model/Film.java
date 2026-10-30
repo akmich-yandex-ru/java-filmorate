@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Data
@@ -26,5 +26,9 @@ public class Film {
     @Positive(message = "Продолжительность фильма должна быть положительным числом")
     private int duration;
 
-    private Set<Long> likes = new HashSet<>();
+    private Set<Long> likes;
+    private Set<Genre> genres;
+
+    @NotNull(message = "Рейтинг MPA должен быть указан")
+    private MPA mpa;
 }

@@ -6,6 +6,7 @@ import ru.yandex.practicum.filmorate.model.Film;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
@@ -43,6 +44,37 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public Optional<Film> findById(Long id) {
         return Optional.ofNullable(films.get(id));
+    }
+
+    @Override
+    public void addLike(Long filmId, Long userId) {
+        Film film = films.get(filmId);
+        if (film != null) {
+            if (film.getLikes() == null) {
+                film.setLikes(new LinkedHashSet<>());
+            }
+            film.getLikes().add(userId);
+        }
+    }
+
+    @Override
+    public void removeLike(Long filmId, Long userId) {
+        Film film = films.get(filmId);
+        if (film != null && film.getLikes() != null) {
+            film.getLikes().remove(userId);
+        }
+    }
+
+    @Override
+    public Collection<Film> findPopular(Integer count) {
+        return films.values().stream()
+                .sorted((f1, f2) -> {
+                    int likes1 = f1.getLikes() == null ? 0 : f1.getLikes().size();
+                    int likes2 = f2.getLikes() == null ? 0 : f2.getLikes().size();
+                    return Integer.compare(likes2, likes1); // Сортировка по убыванию
+                })
+                .limit(count)
+                .collect(Collectors.toList());
     }
 
     private long getNextId() {
