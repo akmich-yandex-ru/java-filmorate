@@ -256,6 +256,7 @@ public class FilmDbStorage implements FilmStorage {
             throw new NotFoundException("Лайк от пользователя с id = " + userId + " не найден");
         }
     }
+
     @Override
     public Collection<Film> findPopular(Integer count) {
         Collection<Film> films = jdbcTemplate.query(SQL_FIND_POPULAR_FILMS, filmRowMapper, count);
