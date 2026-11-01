@@ -1,72 +1,71 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.FilmService;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
 @RestController
+@Validated
+@RequiredArgsConstructor
 @RequestMapping("/films")
 public class FilmController {
-    private static final LocalDate EARLIEST_RELEASE = LocalDate.of(1895, 12, 28);
-    private static final DateTimeFormatter RUSSIAN_DATE_FORMATTER = DateTimeFormatter.ofPattern("d MMMM yyyy 'года'", Locale.of("ru"));
-
-    private final Map<Integer, Film> films = new HashMap<>();
-    private int currentId = 0;
-
-    @GetMapping
-    public Collection<Film> findAll() {
-        log.info("Получен запрос на получение списка всех фильмов. Текущее количество: {}", films.size());
-        return films.values();
-
-    }
+    private final FilmService filmService;
 
     @PostMapping
-    public Film add(@Valid @RequestBody Film newFilm) {
-        log.info("Получен запрос на добавление фильма: {}", newFilm);
-        validateReleaseDate(newFilm);
-
-        newFilm.setId(getNextId());
-        films.put(newFilm.getId(), newFilm);
-        log.info("Фильм успешно добавлен с id = {}: {}", newFilm.getId(), newFilm);
-        return newFilm;
-    }
-
-    private int getNextId() {
-        return ++currentId;
+    @ResponseStatus(HttpStatus.CREATED)
+    public Film add(@Valid @RequestBody Film film) {
+        return filmService.add(film);
     }
 
     @PutMapping
+    @ResponseStatus(HttpStatus.OK)
     public Film update(@Valid @RequestBody Film film) {
-        log.info("Получен запрос на обновление фильма: {}", film);
-
-        if (film.getId() == null) {
-            log.warn("Ошибка валидации при обновлении: не указан id фильма");
-            throw new ValidationException("Id должен быть указан");
-        }
-
-        if (!films.containsKey(film.getId())) {
-            log.warn("Ошибка обновления: фильм с id = {} не найден", film.getId());
-            throw new NotFoundException("Фильм с id = " + film.getId() + " не найден");
-        }
-
-        validateReleaseDate(film);
-        films.put(film.getId(), film);
-        log.info("Фильм с id = {} успешно обновлен: {}", film.getId(), film.getName());
-        return film;
+        return filmService.update(film);
     }
 
-    private void validateReleaseDate(Film film) {
-        if (film.getReleaseDate() != null && film.getReleaseDate().isBefore(EARLIEST_RELEASE)) {
-            log.warn("Ошибка валидации фильма '{}': некорректная дата релиза {}", film.getName(), film.getReleaseDate());
-            throw new ValidationException("Дата релиза не может быть раньше " + EARLIEST_RELEASE.format(RUSSIAN_DATE_FORMATTER));
-        }
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public Collection<Film> findAll() {
+        return filmService.findAll();
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        filmService.delete(id);
+    }
+
+    @PutMapping("/{id}/like/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void addLike(@PathVariable Long id, @PathVariable Long userId) {
+        filmService.addLike(id, userId);
+    }
+
+    @DeleteMapping("/{id}/like/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeLike(@PathVariable Long id, @PathVariable Long userId) {
+        filmService.removeLike(id, userId);
+    }
+
+    @GetMapping("/popular")
+    @ResponseStatus(HttpStatus.OK)
+    public Collection<Film> getMostPopular(@RequestParam(defaultValue = "10")
+                                               @Positive(message = "Количество фильмов должно быть положительным") Integer count) {
+        return filmService.getMostPopular(count);
+    }
+
+    @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public Film findById(@PathVariable Long id) {
+        return filmService.findById(id);
     }
 }
