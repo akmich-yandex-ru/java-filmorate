@@ -125,9 +125,12 @@ public class FilmDbStorage implements FilmStorage {
             return statement;
         }, keyHolder);
 
+        long id = Objects.requireNonNull(keyHolder.getKey()).longValue();
+        film.setId(id);
+
         saveFilmGenres(film);
 
-        return findById(film.getId())
+        return findById(id)
                 .orElseThrow(() -> new NotFoundException("Фильм не найден сразу после создания"));
     }
 

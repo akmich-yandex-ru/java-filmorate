@@ -71,7 +71,7 @@ public class GenreDbStorage implements GenreStorage {
     }
 
     @Override
-    public Collection<Genre> findGenresByFilmId(List<Long> filmId) {
+    public Collection<Genre> findGenresByFilmId(Long filmId) {
         return jdbcTemplate.query(FIND_GENRES_BY_FILM_ID_QUERY, genreRowMapper, filmId);
     }
 }

@@ -141,7 +141,7 @@ public class FilmService {
                     return new NotFoundException("Фильм с id = " + id + " не найден");
                 });
 
-        Collection<Genre> genres = genreStorage.findGenresByFilmId(List.of(id));
+        Collection<Genre> genres = genreStorage.findGenresByFilmId(id);
         film.setGenres(new LinkedHashSet<>(genres));
 
         return film;
@@ -180,7 +180,6 @@ public class FilmService {
             throw new NotFoundException("Один или несколько жанров не найдены в базе данных");
         }
 
-        // 4. Сортируем жанры по ID через TreeSet и возвращаем требуемый LinkedHashSet
         Set<Genre> sortedGenres = new TreeSet<>(Comparator.comparing(Genre::getId));
         sortedGenres.addAll(resolvedGenres);
 
