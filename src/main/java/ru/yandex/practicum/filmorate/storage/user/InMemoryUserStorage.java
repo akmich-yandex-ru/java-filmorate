@@ -110,4 +110,20 @@ public class InMemoryUserStorage implements UserStorage {
             user.getFriends().put(friendId, status);
         }
     }
+
+    @Override
+    public Collection<User> findCommonFriends(Long userId, Long otherId) {
+        User user = users.get(userId);
+        User otherUser = users.get(otherId);
+
+        if (user == null || user.getFriends() == null || otherUser == null || otherUser.getFriends() == null) {
+            return List.of();
+        }
+
+        return user.getFriends().keySet().stream()
+                .filter(otherUser.getFriends()::containsKey)
+                .map(users::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
 }

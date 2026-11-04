@@ -10,7 +10,6 @@ import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -44,7 +43,7 @@ public class UserService {
             throw new ValidationException("Id должен быть указан");
         }
 
-        User oldUser = userStorage.findById(user.getId())
+        userStorage.findById(user.getId())
                 .orElseThrow(() -> {
                     log.warn("Ошибка обновления: пользователь с id = {} не найден", user.getId());
                     return new NotFoundException("Пользователь с id = " + user.getId() + " не найден");
@@ -159,11 +158,6 @@ public class UserService {
             throw new NotFoundException("Один из пользователей не найден");
         }
 
-        Collection<User> userFriends = userStorage.findFriendsByUserId(userId);
-        Collection<User> otherFriends = userStorage.findFriendsByUserId(otherId);
-
-        return userFriends.stream()
-                .filter(otherFriends::contains)
-                .collect(Collectors.toList());
+        return userStorage.findCommonFriends(userId, otherId);
     }
 }

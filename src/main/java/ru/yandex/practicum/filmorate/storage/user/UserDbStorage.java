@@ -96,6 +96,19 @@ public class UserDbStorage implements UserStorage {
             VALUES (?, ?, ?)
             """;
 
+    private static final String SQL_FIND_COMMON_FRIENDS = """
+            SELECT DISTINCT u.* FROM users u
+            JOIN friendships f1 ON u.id = f1.friend_id
+            JOIN friendships f2 ON u.id = f2.friend_id
+            WHERE f1.user_id = ? AND f2.user_id = ?
+            """;
+
+    private static final String SQL_FIND_FRIENDS_FOR_USER_IDS = """
+        SELECT user_id, friend_id, status
+        FROM friendships
+        WHERE user_id IN (%s)
+        """;
+
     private final JdbcTemplate jdbcTemplate;
     private final UserRowMapper userRowMapper;
 
@@ -115,9 +128,7 @@ public class UserDbStorage implements UserStorage {
         long id = Objects.requireNonNull(keyHolder.getKey()).longValue();
         user.setId(id);
 
-        if (user.getFriends() != null && !user.getFriends().isEmpty()) {
-            saveFriends(user);
-        }
+        user.setFriends(new HashMap<>());
 
         return user;
     }
@@ -131,8 +142,8 @@ public class UserDbStorage implements UserStorage {
                 Date.valueOf(user.getBirthday()),
                 user.getId());
 
-        if (user.getFriends() != null) {
-            saveFriends(user);
+        if (user.getFriends() == null) {
+            user.setFriends(new HashMap<>());
         }
 
         return user;
@@ -153,16 +164,62 @@ public class UserDbStorage implements UserStorage {
     @Override
     public Collection<User> findAll() {
         Collection<User> users = jdbcTemplate.query(SQL_FIND_ALL_USERS, userRowMapper);
-        users.forEach(this::loadFriends);
+
+        if (users.isEmpty()) {
+            return users;
+        }
+
+        List<Long> userIds = users.stream()
+                .map(User::getId)
+                .toList();
+
+        Map<Long, Map<Long, FriendshipStatus>> friendsByUserId = new HashMap<>();
+
+        String inSql = String.join(",", Collections.nCopies(userIds.size(), "?"));
+        String sql = String.format(SQL_FIND_FRIENDS_FOR_USER_IDS, inSql);
+
+        jdbcTemplate.query(sql, (rs) -> {
+            Long userId = rs.getLong("user_id");
+            Long friendId = rs.getLong("friend_id");
+
+            String statusStr = rs.getString("status");
+            FriendshipStatus status = FriendshipStatus.valueOf(
+                    statusStr != null ? statusStr.toUpperCase() : "UNCONFIRMED"
+            );
+
+            friendsByUserId.computeIfAbsent(userId, k -> new HashMap<>()).put(friendId, status);
+        }, userIds.toArray());
+
+        users.forEach(user -> {
+            Map<Long, FriendshipStatus> userFriends = friendsByUserId.getOrDefault(user.getId(), Collections.emptyMap());
+            user.setFriends(userFriends);
+        });
+
         return users;
     }
 
     @Override
     public Optional<User> findById(Long id) {
-        return jdbcTemplate.query(SQL_FIND_USER_BY_ID, userRowMapper, id)
+        Optional<User> userOptional = jdbcTemplate.query(SQL_FIND_USER_BY_ID, userRowMapper, id)
                 .stream()
-                .findFirst()
-                .map(this::loadFriends);
+                .findFirst();
+
+        userOptional.ifPresent(user -> {
+            Map<Long, FriendshipStatus> friends = new HashMap<>();
+
+            jdbcTemplate.query(SQL_FIND_FRIENDS_BY_USER_ID, (rs) -> {
+                Long friendId = rs.getLong("friend_id");
+                String statusStr = rs.getString("status");
+                FriendshipStatus status = FriendshipStatus.valueOf(
+                        statusStr != null ? statusStr.toUpperCase() : "UNCONFIRMED"
+                );
+                friends.put(friendId, status);
+            }, id);
+
+            user.setFriends(friends);
+        });
+
+        return userOptional;
     }
 
     @Override
@@ -178,13 +235,38 @@ public class UserDbStorage implements UserStorage {
     @Override
     public Collection<User> findFriendsByUserId(Long userId) {
         Collection<User> friends = jdbcTemplate.query(SQL_FIND_FRIENDS_BY_USER_ID, userRowMapper, userId);
-        friends.forEach(this::loadFriends);
-        return friends;
-    }
 
-    private User loadFriends(User user) {
-        user.setFriends(findFriends(user.getId()));
-        return user;
+        if (friends.isEmpty()) {
+            return friends;
+        }
+
+        List<Long> friendIds = friends.stream()
+                .map(User::getId)
+                .toList();
+
+        Map<Long, Map<Long, FriendshipStatus>> friendsOfFriends = new HashMap<>();
+
+        String inSql = String.join(",", Collections.nCopies(friendIds.size(), "?"));
+        String sql = String.format(SQL_FIND_FRIENDS_FOR_USER_IDS, inSql);
+
+        jdbcTemplate.query(sql, (rs) -> {
+            Long currentUserId = rs.getLong("user_id");
+            Long friendId = rs.getLong("friend_id");
+
+            String statusStr = rs.getString("status");
+            FriendshipStatus status = FriendshipStatus.valueOf(
+                    statusStr != null ? statusStr.toUpperCase() : "UNCONFIRMED"
+            );
+
+            friendsOfFriends.computeIfAbsent(currentUserId, k -> new HashMap<>()).put(friendId, status);
+        }, friendIds.toArray());
+
+        friends.forEach(user -> {
+            Map<Long, FriendshipStatus> userFriends = friendsOfFriends.getOrDefault(user.getId(), Collections.emptyMap());
+            user.setFriends(userFriends);
+        });
+
+        return friends;
     }
 
     private Map<Long, FriendshipStatus> findFriends(long userId) {
@@ -217,7 +299,7 @@ public class UserDbStorage implements UserStorage {
             if (rs.next()) {
                 return FriendshipStatus.valueOf(rs.getString("status"));
             }
-            return null; // Если связи еще нет, возвращаем null
+            return null;
         }, userId, friendId);
     }
 
@@ -230,4 +312,10 @@ public class UserDbStorage implements UserStorage {
     public void addFriendConnection(long userId, long friendId, FriendshipStatus status) {
         jdbcTemplate.update(SQL_INSERT_FRIENDSHIP, userId, friendId, status.name());
     }
+
+    @Override
+    public Collection<User> findCommonFriends(Long userId, Long otherId) {
+        return jdbcTemplate.query(SQL_FIND_COMMON_FRIENDS, userRowMapper, userId, otherId);
+    }
+
 }

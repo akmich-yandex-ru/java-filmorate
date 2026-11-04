@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.model;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,5 +30,6 @@ public class Film {
     private Set<Genre> genres;
 
     @NotNull(message = "Рейтинг MPA должен быть указан")
+    @Valid
     private MPA mpa;
 }

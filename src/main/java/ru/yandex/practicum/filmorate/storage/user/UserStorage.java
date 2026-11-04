@@ -30,4 +30,6 @@ public interface UserStorage {
     void updateFriendship(long userId, long friendId, FriendshipStatus status);
 
     void addFriendConnection(long userId, long friendId, FriendshipStatus status);
+
+    Collection<User> findCommonFriends(Long userId, Long otherId);
 }
